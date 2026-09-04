@@ -34,7 +34,8 @@ def save_data(sales, stock, exp):
 try:
     sales_df, stock_df, exp_df = load_data()
 except Exception as e:
-    st.error("Google Sheet එකට සම්බන්ධ වීමේ දෝෂයක්. Settings වල URL එක නිවැරදිදැයි බලන්න.")
+    # මෙතන තමයි වෙනස් කළේ
+    st.error(f"ඇත්තම දෝෂය: {e}")
     st.stop()
 
 st.title("🛒 Shopping Bag POS System (Cloud)")
