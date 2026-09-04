@@ -31,7 +31,15 @@ class GSheetsConnCompat:
 
 @st.cache_resource
 def get_connection():
+  # secrets වල ඇති දත්ත ඩික්ෂනරියකට ගෙන private_key එකේ \n නිවැරදි කරගැනීම
   credentials_dict = dict(st.secrets["connections"]["gsheets"])
+
+  # \n අකුර සැබෑ newline එකක් බවට හැරවීම (PEM error සහ TOML errors නැති කිරීමට)
+  if "private_key" in credentials_dict:
+    credentials_dict["private_key"] = credentials_dict["private_key"].replace(
+        "\\n", "\n"
+    )
+
   scope = [
       "https://spreadsheets.google.com/feeds",
       "https://www.googleapis.com/auth/drive",
@@ -70,6 +78,6 @@ def load_data():
 # ඩේටා ලෝඩ් කිරීම
 sales, stock, expenses = load_data()
 
-# යෙදුමේ ඉතිරි කොටස මෙතැන් සිට ක්‍රියාත්මක වේ
+# යෙදුමේ මුල් පිටුව
 st.title("🛒 Shopping Bag POS System")
-st.write("གූගල් ෂීට් සම්බන්ධතාවය සාර්ථකව ක්‍රියාත්මක වේ!")
+st.success("ගූගල් ෂීට් සම්බන්ධතාවය සාර්ථකව ක්‍රියාත්මක වේ!")
