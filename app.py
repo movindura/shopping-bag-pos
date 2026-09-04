@@ -4,7 +4,7 @@ import requests
 import streamlit as st
 
 st.set_page_config(
-    page_title="Shopping Bag POS System", layout="wide", page_icon="🛒"
+    page_title="At groceries POS System", layout="wide", page_icon="🛒"
 )
 
 # ඔබ Deploy කළ Google Apps Script Web App URL එක මෙහි දමන්න
