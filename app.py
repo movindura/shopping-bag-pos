@@ -45,7 +45,7 @@ sales_df, stock_df, exp_df = load_data()
 if "cart" not in st.session_state:
   st.session_state.cart = []
 
-st.title("🛒 Shopping Bag POS System")
+st.title("🛒 At groceries POS System")
 
 # Sidebar
 st.sidebar.header("මෙනුව (Menu)")
@@ -61,7 +61,7 @@ menu = st.sidebar.radio(
 
 # ---------------- 1. POS SYSTEM ----------------
 if menu == "POS (බිල්පත් නිකුත් කිරීම)":
-  st.header("🖥️ POS පද්ධතිය - නව බිල්පත")
+  st.header("🖥️ At groceries POS System - නව බිල්පත")
 
   if stock_df.empty:
     st.warning("⚠️ තොග දත්ත (Stock) හමු නොවීය. කරුණාකර Google Sheet එක පරීක්ෂා කරන්න.")
