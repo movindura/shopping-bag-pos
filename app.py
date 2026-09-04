@@ -30,21 +30,9 @@ class GSheetsConnCompat:
 
 @st.cache_resource
 def get_connection():
-  # st.secrets සිට ඩික්ෂනරියක් ලබා ගැනීම
-  raw_secrets = st.secrets["connections"]["gsheets"]
-  credentials_dict = {
-      "type": raw_secrets["type"],
-      "project_id": raw_secrets["project_id"],
-      "private_key_id": raw_secrets["private_key_id"],
-      # \n අකුරු සැබෑ newline බවට හැරවීම
-      "private_key": raw_secrets["private_key"].replace("\\n", "\n"),
-      "client_email": raw_secrets["client_email"],
-      "client_id": raw_secrets["client_id"],
-      "auth_uri": raw_secrets["auth_uri"],
-      "token_uri": raw_secrets["token_uri"],
-      "auth_provider_x509_cert_url": raw_secrets["auth_provider_x509_cert_url"],
-      "client_x509_cert_url": raw_secrets["client_x509_cert_url"],
-  }
+  # සජීවීව service_account.json ෆයිල් එක හරහා ලෝඩ් කරගැනීම
+  with open("service_account.json") as f:
+    credentials_dict = json.load(f)
 
   scope = [
       "https://spreadsheets.google.com/feeds",
@@ -54,7 +42,9 @@ def get_connection():
       credentials_dict, scopes=scope
   )
   client = gspread.authorize(creds)
-  spreadsheet_url = raw_secrets["spreadsheet"]
+
+  # ගූගල් ෂීට් ලින්ක් එක මෙතැනට දාන්න
+  spreadsheet_url = "https://docs.google.com/spreadsheets/d/1rpA2L5VnGw226st1suhP3E5rHTSsX3T4huTWAGJdydI/edit"
   spreadsheet = client.open_by_url(spreadsheet_url)
   return GSheetsConnCompat(spreadsheet)
 
