@@ -10,7 +10,6 @@ st.set_page_config(
 )
 
 
-# gspread හරහා සම්බන්ධ වී streamlit-gsheets වල conn.read ක්‍රමයම ක්‍රියාත්මක වන සේ සැකසීම
 class GSheetsConnCompat:
 
   def __init__(self, spreadsheet):
@@ -31,14 +30,21 @@ class GSheetsConnCompat:
 
 @st.cache_resource
 def get_connection():
-  # secrets වල ඇති දත්ත ඩික්ෂනරියකට ගෙන private_key එකේ \n නිවැරදි කරගැනීම
-  credentials_dict = dict(st.secrets["connections"]["gsheets"])
-
-  # \n අකුර සැබෑ newline එකක් බවට හැරවීම (PEM error සහ TOML errors නැති කිරීමට)
-  if "private_key" in credentials_dict:
-    credentials_dict["private_key"] = credentials_dict["private_key"].replace(
-        "\\n", "\n"
-    )
+  # st.secrets සිට ඩික්ෂනරියක් ලබා ගැනීම
+  raw_secrets = st.secrets["connections"]["gsheets"]
+  credentials_dict = {
+      "type": raw_secrets["type"],
+      "project_id": raw_secrets["project_id"],
+      "private_key_id": raw_secrets["private_key_id"],
+      # \n අකුරු සැබෑ newline බවට හැරවීම
+      "private_key": raw_secrets["private_key"].replace("\\n", "\n"),
+      "client_email": raw_secrets["client_email"],
+      "client_id": raw_secrets["client_id"],
+      "auth_uri": raw_secrets["auth_uri"],
+      "token_uri": raw_secrets["token_uri"],
+      "auth_provider_x509_cert_url": raw_secrets["auth_provider_x509_cert_url"],
+      "client_x509_cert_url": raw_secrets["client_x509_cert_url"],
+  }
 
   scope = [
       "https://spreadsheets.google.com/feeds",
@@ -48,7 +54,7 @@ def get_connection():
       credentials_dict, scopes=scope
   )
   client = gspread.authorize(creds)
-  spreadsheet_url = st.secrets["connections"]["gsheets"]["spreadsheet"]
+  spreadsheet_url = raw_secrets["spreadsheet"]
   spreadsheet = client.open_by_url(spreadsheet_url)
   return GSheetsConnCompat(spreadsheet)
 
@@ -75,9 +81,7 @@ def load_data():
   return sales, stock, expenses
 
 
-# ඩේටා ලෝඩ් කිරීම
 sales, stock, expenses = load_data()
 
-# යෙදුමේ මුල් පිටුව
 st.title("🛒 Shopping Bag POS System")
 st.success("ගූගල් ෂීට් සම්බන්ධතාවය සාර්ථකව ක්‍රියාත්මක වේ!")
