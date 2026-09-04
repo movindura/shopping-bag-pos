@@ -1,4 +1,6 @@
 from datetime import datetime
+import json
+import tempfile
 from google.oauth2.service_account import Credentials
 import gspread
 import pandas as pd
@@ -29,7 +31,6 @@ class GSheetsConnCompat:
 
 @st.cache_resource
 def get_connection():
-  # ප්‍රයිවෙට් කේ එකේ ඇති සියලුම අදෘශ්‍යමාන වින්ඩෝස් ලයින් එන්ඩිං (\r) සහ අමතර හිස්තැන් පිරිසිදු කිරීම
   raw_private_key = """-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDBmHo/SzKv9i51
 0wI0s2Szf43EMZXNxH886zFSAjzjPEZVDTmHFjq57rtnsOwQSNgvo9XxiXna8Z05
@@ -59,13 +60,11 @@ nj5ZqWG22qiZPpqqCJvIGao8Vu3C1cdDMonPB1/S5/USCip8oFwur2ZYgWKbXUhqR
 1Y8YSiwNVv59PyfD0mXpRpc=
 -----END PRIVATE KEY-----"""
 
-  cleaned_private_key = raw_private_key.replace("\r", "").strip()
-
   credentials_dict = {
       "type": "service_account",
       "project_id": "pos-system-507617",
       "private_key_id": "0be7756d85b7f384ad090a648ee8713951ed0b5a",
-      "private_key": cleaned_private_key,
+      "private_key": raw_private_key.replace("\r", "").strip(),
       "client_email": "pos-admin@pos-system-507617.iam.gserviceaccount.com",
       "client_id": "113174180402475269837",
       "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -76,14 +75,20 @@ nj5ZqWG22qiZPpqqCJvIGao8Vu3C1cdDMonPB1/S5/USCip8oFwur2ZYgWKbXUhqR
       ),
   }
 
+  # තාවකාලික ෆයිල් එකක් ලෙස සකස් කර ගූගල් އතුමෙන් කියවීම (PEM දෝෂ මඟහරවා ගැනීමට)
+  with tempfile.NamedTemporaryFile(
+      mode="w", delete=False, suffix=".json"
+  ) as temp_file:
+    json.dump(credentials_dict, temp_file)
+    temp_file_path = temp_file.name
+
   scope = [
       "https://spreadsheets.google.com/feeds",
       "https://www.googleapis.com/auth/drive",
   ]
-  creds = Credentials.from_service_account_info(
-      credentials_dict, scopes=scope
-  )
+  creds = Credentials.from_service_account_file(temp_file_path, scopes=scope)
   client = gspread.authorize(creds)
+
   spreadsheet_url = "https://docs.google.com/spreadsheets/d/1rpA2L5VnGw226st1suhP3E5rHTSsX3T4huTWAGJdydI/edit"
   spreadsheet = client.open_by_url(spreadsheet_url)
   return GSheetsConnCompat(spreadsheet)
