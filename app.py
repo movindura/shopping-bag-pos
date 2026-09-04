@@ -29,11 +29,8 @@ class GSheetsConnCompat:
 
 @st.cache_resource
 def get_connection():
-  credentials_dict = {
-      "type": "service_account",
-      "project_id": "pos-system-507617",
-      "private_key_id": "0be7756d85b7f384ad090a648ee8713951ed0b5a",
-      "private_key": """-----BEGIN PRIVATE KEY-----
+  # ප්‍රයිවෙට් කේ එකේ ඇති සියලුම අදෘශ්‍යමාන වින්ඩෝස් ලයින් එන්ඩිං (\r) සහ අමතර හිස්තැන් පිරිසිදු කිරීම
+  raw_private_key = """-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDBmHo/SzKv9i51
 0wI0s2Szf43EMZXNxH886zFSAjzjPEZVDTmHFjq57rtnsOwQSNgvo9XxiXna8Z05
 Igtv0nI/7a9SOJJxM1+W3PmUKyjhWNJEGSFD87l4pDxpxu/HurUCk25kCl0Gwplb
@@ -60,7 +57,15 @@ OSFt44M9SLGsNsxceqhx9yfFuVOLQeaNSg0UTDUCgYEAyabMCRKwOabk97FdgwMt
 LN2ln0hAPSklZ/AO8IRKx7wAFTPnz1PKFSEoD7MkpUZPvyaRWL/T7KyLukLr6s6X
 nj5ZqWG22qiZPpqqCJvIGao8Vu3C1cdDMonPB1/S5/USCip8oFwur2ZYgWKbXUhqR
 1Y8YSiwNVv59PyfD0mXpRpc=
------END PRIVATE KEY-----""",
+-----END PRIVATE KEY-----"""
+
+  cleaned_private_key = raw_private_key.replace("\r", "").strip()
+
+  credentials_dict = {
+      "type": "service_account",
+      "project_id": "pos-system-507617",
+      "private_key_id": "0be7756d85b7f384ad090a648ee8713951ed0b5a",
+      "private_key": cleaned_private_key,
       "client_email": "pos-admin@pos-system-507617.iam.gserviceaccount.com",
       "client_id": "113174180402475269837",
       "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -84,7 +89,6 @@ nj5ZqWG22qiZPpqqCJvIGao8Vu3C1cdDMonPB1/S5/USCip8oFwur2ZYgWKbXUhqR
   return GSheetsConnCompat(spreadsheet)
 
 
-# Google Sheets සම්බන්ධතාවය
 conn = get_connection()
 
 if "cart" not in st.session_state:
