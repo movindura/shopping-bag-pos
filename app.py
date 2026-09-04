@@ -1,5 +1,4 @@
 from datetime import datetime
-import json
 from google.oauth2.service_account import Credentials
 import gspread
 import pandas as pd
@@ -30,9 +29,24 @@ class GSheetsConnCompat:
 
 @st.cache_resource
 def get_connection():
-  # සජීවීව service_account.json ෆයිල් එක හරහා ලෝඩ් කරගැනීම
-  with open("service_account.json") as f:
-    credentials_dict = json.load(f)
+  # ඩේටා සියල්ල කෙලින්ම කේතය තුළම සකස් කර ඇත (ഫයිල් ලෝඩ් කිරීම අවශ්‍ය නැත)
+  credentials_dict = {
+      "type": "service_account",
+      "project_id": "pos-system-507617",
+      "private_key_id": "0be7756d85b7f384ad090a648ee8713951ed0b5a",
+      "private_key": (
+          "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcw"
+          "ggSjAgEAAoIBAQDBmHo/SzKv9i51\n0wI0s2Szf43EMZXNxH886zFSAjzjPEZVDTmHFjq57rtnsOwQSNgvo9XxiXna8Z05\nIgtv0nI/7a9SOJJxM1+W3PmUKyjhWNJEGSFD87l4pDxpxu/HurUCk25kCl0Gwplb\nLC+gm2OotTlBqoMU2lbwmsCfzNLB3NYhmbi+MXJ2Rkat3Q3yM+wtabA0iRlsf/i5\nxIMJJOrSxVjKOPb24tkCHhunfJZD9t8bszdtRtNfyYh0kRxVPcDdbpE1fV19ZD16\nzwMXVllzVYm8aYL8O1ZXdsDW4z/l9g9iWrYdaUgYG7Qr4jeTANj5hVgC4BJdI5DR\n1j6D3KpxAgMBAAECggEAGOKY+jhYFmLSg45BZxVVQTaI+lp2W2oiAepon1ZOzdXi\nY43s4may21Iq8E//dDNs6KjKeD8X9RMgRucPqcrXKU0L/4lql5cHN00F3uwyV88z\nThId4s56PZ387wrlqRqgqGlbpAvp+9O5Y00ZfS9kPtw2tTBuI5jSWqDF2HS7dbRM\na10io2bYHxJPwuow+K85d8YC5hleG3cyzrbDrl3CEsuEEfBIkrkf2ysrasBgXa9D\nzE4O6KjdLXHME4ufC/CBc8qtTGh6lpNj7OEyZJKxu0qs0J5wmKIV1boKMRLJUJOR\nMwW4NRlOOGRVQpRCx8+04Yd2N153z8vpMV3ktMunPQKBgQDiZSllxcCRQwHkk27F\nu10q1nK3SZ24zQKAIUukGXIq6RpczbhkmNm+3fYeq/0gfLNpwICSKpWEHUJsEsI3\HDnTyv5GZTWicHAjFXZ7dNH8JQNoZjlVz4ZBPPxcC9Kv1YaqmgHpz5R6RM7Wj411\nY8ztECR8Mkg7/Fru+kxcgBgjHQKBgQDa6VAyInYLhr8LMWX3edETV9D1b1BaHgqK\njNyQOeqTOZRJyi7yrvBXOIISfBH1kz/rL3VAJNXTiA6uRjWe7L0b6hYgfr1RpYT6\5ctMe6ucCSbkTNQR8cF9T6lmSVJjNwonW3HWuaYtrBUTT0uzDmvxxPpOKgVQX0Ht\nlZfQUqkQZQKBgFQLK+ANFlyWnHhHRwL+eCqz62ghWvzEll4MfjEQBTLq0A+NixtF\nJuhVK83dGR3bTRtADDq2tkSSPBs0p4af4tO98sEdR1jjFq3fhNl115IcB3TVJgm1\n/WfwhNqCxRbjVJe2jmlG1x7AtmwuZFwkzWlf6bt1Sx2BpBw9LOXV45/9AoGAOxKc\nrnq4KhIZeZbB8k8wCS04WRLJtxfGNm8ekdjfIQ13o5Xop1pnxtGb4AsU+ZTbucZb\nuIx4GxXrCEIv9AvkWCUKBYjN47trsBzUiHYS8A9ULGVDEPiRAxS9HLoKfnV6yvYV\nOSFt44M9SLGsNsxceqhx9yfFuVOLQeaNSg0UTDUCgYEAyabMCRKwOabk97FdgwMt\nLN2ln0hAPSklZ/AO8IRKx7wAFTPnz1PKFSEoD7MkpUZPvyaRWL/T7KyLukLr6s6X\nj5ZqWG22qiZPpqqCJvIGao8Vu3C1cdDMonPB1/S5/USCip8oFwur2ZYgWKbXUhqR\1Y8YSiwNVv59PyfD0mXpRpc=\n-----END PRIVATE KEY-----"
+      ),
+      "client_email": "pos-admin@pos-system-507617.iam.gserviceaccount.com",
+      "client_id": "113174180402475269837",
+      "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+      "token_uri": "https://oauth2.googleapis.com/token",
+      "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+      "client_x509_cert_url": (
+          "https://www.googleapis.com/robot/v1/metadata/x509/pos-admin%40pos-system-507617.iam.gserviceaccount.com"
+      ),
+  }
 
   scope = [
       "https://spreadsheets.google.com/feeds",
@@ -42,8 +56,6 @@ def get_connection():
       credentials_dict, scopes=scope
   )
   client = gspread.authorize(creds)
-
-  # ගූගල් ෂීට් ලින්ක් එක මෙතැනට දාන්න
   spreadsheet_url = "https://docs.google.com/spreadsheets/d/1rpA2L5VnGw226st1suhP3E5rHTSsX3T4huTWAGJdydI/edit"
   spreadsheet = client.open_by_url(spreadsheet_url)
   return GSheetsConnCompat(spreadsheet)
