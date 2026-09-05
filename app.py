@@ -3,16 +3,19 @@ import pandas as pd
 from datetime import datetime
 import requests
 import json
+import base64
 
 # Page Config
-st.set_page_config(page_title="At grocerries Accounts System", layout="wide", page_icon="🛒")
+st.set_page_config(page_title="Shopping Bag POS System", layout="wide", page_icon="🛒")
 
 # ඔයාගේ අලුත් Web App URL එක මෙතන දාන්න
 WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzi_3ZDoAG-dPPZ9zEvJf4omNvobMht5vsDXaSsEKLOcF5S_7x3DBB88Kn1OlLFr7fHgQ/exec"
 
-# Cart එක Session එකේ තියාගැනීම
+# Cart සහ Print Session එක තියාගැනීම
 if 'cart' not in st.session_state:
     st.session_state.cart = []
+if 'last_receipt' not in st.session_state:
+    st.session_state.last_receipt = None
 
 # Google Sheets වලින් Data Load කිරීම
 def load_data():
@@ -24,7 +27,6 @@ def load_data():
         stock = pd.DataFrame(data.get("Stock", []))
         expenses = pd.DataFrame(data.get("Expenses", []))
         
-        # දත්ත නිවැරදි අංක (Numeric) බවට පරිවර්තනය කිරීම (TypeError මඟහරවා ගැනීමට)
         if not sales.empty:
             sales['QTY Sold'] = pd.to_numeric(sales['QTY Sold'], errors='coerce').fillna(0)
             sales['Sold Price'] = pd.to_numeric(sales['Sold Price'], errors='coerce').fillna(0)
@@ -42,13 +44,11 @@ def load_data():
                 
             stock['Item Code'] = stock['Item Code'].fillna('')
             
-            # Stock ෂීට් එකේ සියලුම මිල ගණන් සහ ප්‍රමාණ අංක බවට පත් කිරීම
             numeric_cols = ['ගැනුම් මිල', 'විකුණුම් මිල', 'ලාභය', 'උදේ Stock', 'අද විකුනපු', 'Balance Stock', 'Stock Value']
             for col in numeric_cols:
                 if col in stock.columns:
                     stock[col] = pd.to_numeric(stock[col], errors='coerce').fillna(0)
         else:
-            # Stock ෂීට් එක හිස් නම් අලුතින් Columns හදාගැනීම
             stock = pd.DataFrame(columns=['Item Code', 'Item Category', 'Item Name', 'Size', 'ගැනුම් මිල', 'විකුණුම් මිල', 'ලාභය', 'උදේ Stock', 'අද විකුනපු', 'Balance Stock', 'Stock Value'])
 
         return sales, stock, expenses
@@ -82,12 +82,10 @@ def save_data(sales, stock, exp):
         st.error("Save කිරීමේදී දෝෂයක් මතු විය.")
         return False
 
-# ඩේටා ලෝඩ් කිරීම
 sales_df, stock_df, exp_df = load_data()
 
-st.title("🛒At grocerries Accounts System")
+st.title("🛒 Shopping Bag POS System")
 
-# Sidebar
 st.sidebar.header("මෙනුව (Menu)")
 menu = st.sidebar.radio("මෙතනින් තෝරන්න:", [
     "POS (බිල්පත් නිකුත් කිරීම)", 
@@ -98,7 +96,20 @@ menu = st.sidebar.radio("මෙතනින් තෝරන්න:", [
 
 # ---------------- 1. POS SYSTEM ----------------
 if menu == "POS (බිල්පත් නිකුත් කිරීම)":
-    st.header("🖥️ At grocerries Accounts System - නව බිල්පත")
+    st.header("🖥️ POS පද්ධතිය - නව බිල්පත")
+
+    # සාර්ථක වූ පසු Print Option එක පෙන්වීම
+    if st.session_state.last_receipt:
+        st.success("බිල්පත සාර්ථකව සේව් විය! පහත බොත්තම ඔබා එය Print කරගන්න.")
+        b64 = base64.b64encode(st.session_state.last_receipt.encode('utf-8')).decode('utf-8')
+        href = f'<a href="data:text/html;base64,{b64}" target="_blank" style="display:inline-block; padding:10px 20px; background-color:#4CAF50; color:white; text-decoration:none; border-radius:5px; font-weight:bold; margin-bottom:15px;">🖨️ බිල්පත Print කරන්න (Print Receipt)</a>'
+        st.markdown(href, unsafe_allow_html=True)
+        
+        if st.button("🔄 නව බිල්පතක් ආරම්භ කරන්න"):
+            st.session_state.last_receipt = None
+            st.rerun()
+        st.markdown("---")
+
     col1, col2 = st.columns([1, 1.2])
     
     with col1:
@@ -117,7 +128,7 @@ if menu == "POS (බිල්පත් නිකුත් කිරීම)":
             qty = st.number_input("ප්‍රමාණය (Qty)", min_value=1, value=1)
             custom_price = st.number_input("විකුණන මුළු මුදල (Rs.)", value=float(unit_price * qty))
             
-            if st.button("➕ Bill එකට එක් කරන්න (Add to Bill)"):
+            if st.button("➕ Bill එකට එක් කරන්න"):
                 if qty > available_qty:
                     st.warning("⚠️ අවවාදයි: ගබඩාවේ අවශ්‍ය තරම් තොග නොමැත!")
                 else:
@@ -127,7 +138,7 @@ if menu == "POS (බිල්පත් නිකුත් කිරීම)":
             st.warning("තොග දත්ත නොමැත.")
 
     with col2:
-        st.subheader("🧾At grocerries Accounts System වර්තමාන බිල්පත (Current Bill)")
+        st.subheader("🧾 වර්තමාන බිල්පත")
         if len(st.session_state.cart) > 0:
             cart_df = pd.DataFrame(st.session_state.cart)
             st.dataframe(cart_df, use_container_width=True)
@@ -140,10 +151,36 @@ if menu == "POS (බිල්පත් නිකුත් කිරීම)":
                 if st.button("✅ මුදල් ගෙවා බිල අවසන් කරන්න", use_container_width=True):
                     now = datetime.now()
                     
+                    # HTML Receipt නිර්මාණය කිරීම
+                    receipt_html = f"""
+                    <html>
+                    <head>
+                        <title>Receipt</title>
+                        <style>
+                            body {{ font-family: monospace; width: 300px; margin: 0 auto; padding: 20px; color: #000; }}
+                            .text-center {{ text-align: center; }}
+                            .border-bottom {{ border-bottom: 1px dashed #000; margin-bottom: 10px; padding-bottom: 10px; }}
+                            table {{ width: 100%; border-collapse: collapse; margin-bottom: 10px; }}
+                            th, td {{ text-align: left; padding: 5px 0; font-size: 14px; }}
+                            .right {{ text-align: right; }}
+                        </style>
+                    </head>
+                    <body onload="window.print()">
+                        <div class="text-center border-bottom">
+                            <h2 style="margin-bottom: 5px;">SHOPPING BAG</h2>
+                            <p style="margin: 0; font-size: 14px;">Point of Sale Receipt</p>
+                            <p style="margin: 5px 0; font-size: 12px;">Date: {now.strftime('%Y-%m-%d %H:%M:%S')}</p>
+                        </div>
+                        <table>
+                            <tr><th>Item</th><th>Qty</th><th class="right">Total</th></tr>
+                    """
+                    
                     for item in st.session_state.cart:
                         i_name = item['Item']
                         i_qty = float(item['Qty'])
                         i_total = float(item['Total'])
+                        
+                        receipt_html += f"<tr><td>{i_name}</td><td>{i_qty}</td><td class='right'>{i_total:,.2f}</td></tr>"
                         
                         new_sale = pd.DataFrame([{'Date': now.date(), 'Item Name': i_name, 'QTY Sold': i_qty, 'Sold Price': i_total}])
                         sales_df = pd.concat([sales_df, new_sale], ignore_index=True)
@@ -158,10 +195,19 @@ if menu == "POS (බිල්පත් නිකුත් කිරීම)":
                         stock_df.at[idx, 'Balance Stock'] = morning_stock - stock_df.at[idx, 'අද විකුනපු']
                         stock_df.at[idx, 'Stock Value'] = stock_df.at[idx, 'Balance Stock'] * buy_price
                     
+                    receipt_html += f"""
+                        </table>
+                        <div class="border-bottom"></div>
+                        <h3 class="right">Total: Rs. {grand_total:,.2f}</h3>
+                        <p class="text-center">Thank You, Come Again!</p>
+                    </body>
+                    </html>
+                    """
+                    
                     if save_data(sales_df, stock_df, exp_df):
+                        st.session_state.last_receipt = receipt_html
                         st.session_state.cart = []
-                        st.success("බිල්පත සාර්ථකයි! Google Sheet එකට දත්ත සේව් විය.")
-                    st.rerun()
+                        st.rerun()
                     
             with col_b:
                 if st.button("🗑️ බිල මකා දමන්න", use_container_width=True):
@@ -172,7 +218,7 @@ if menu == "POS (බිල්පත් නිකුත් කිරීම)":
 
 # ---------------- 2. DASHBOARD (Daily & Monthly) ----------------
 elif menu == "Dashboard (වාර්තා)":
-    st.header("📊 At grocerries Accounts System ව්‍යාපාරික වාර්තා (Business Dashboard)")
+    st.header("📊 ව්‍යාපාරික වාර්තා (Business Dashboard)")
     tab_daily, tab_monthly = st.tabs(["📅 දෛනික වාර්තාව (Daily)", "📆 මාසික වාර්තාව (Monthly Summary)"])
     
     with tab_daily:
@@ -262,7 +308,7 @@ elif menu == "Dashboard (වාර්තා)":
 
 # ---------------- 3. STOCK MANAGEMENT ----------------
 elif menu == "Stock (තොග කළමනාකරණය)":
-    st.header("📦 At grocerries Accounts System තොග කළමනාකරණය (Stock Management)")
+    st.header("📦 තොග කළමනාකරණය (Stock Management)")
     tab1, tab2, tab3 = st.tabs(["➕ අලුත් භාණ්ඩ සෑදීම", "📥 තොග එකතු කිරීම", "❌ භාණ්ඩ ඉවත් කිරීම"])
     
     with tab1:
@@ -323,7 +369,7 @@ elif menu == "Stock (තොග කළමනාකරණය)":
 
 # ---------------- 4. ADD EXPENSES ----------------
 elif menu == "Expenses (වියදම්)":
-    st.header("💸 At grocerries Accounts System වියදම් ඇතුලත් කරන්න")
+    st.header("💸 වියදම් ඇතුලත් කරන්න")
     with st.form("expense_form"):
         date = st.date_input("දිනය")
         category = st.text_input("වියදම් වර්ගය (උදා: Transport)")
