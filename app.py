@@ -8,7 +8,7 @@ st.set_page_config(
 )
 
 # ඔබ Deploy කළ Google Apps Script Web App URL එක මෙහි දමන්න
-WEB_APP_URL = "ඔබේ_Apps_Script_Web_App_URL_එක_මෙහි_දමන්න"
+WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw0FbyMvpvYMgvCZVx6yB7wkgmIJ3VKM2nT904c5zbPNQmnDSqG4gQUj4FTQnqpaPyWxA/exec"
 
 
 # Google Sheets වලින් දත්ත ලබා ගැනීම
