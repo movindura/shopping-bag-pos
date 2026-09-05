@@ -5,7 +5,7 @@ import requests
 import json
 
 # Page Config
-st.set_page_config(page_title="Shopping Bag POS System", layout="wide", page_icon="🛒")
+st.set_page_config(page_title="At grocerries Accounts System", layout="wide", page_icon="🛒")
 
 # ඔයාගේ අලුත් Web App URL එක මෙතන දාන්න
 WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzi_3ZDoAG-dPPZ9zEvJf4omNvobMht5vsDXaSsEKLOcF5S_7x3DBB88Kn1OlLFr7fHgQ/exec"
@@ -24,15 +24,33 @@ def load_data():
         stock = pd.DataFrame(data.get("Stock", []))
         expenses = pd.DataFrame(data.get("Expenses", []))
         
-        if 'Item Code' not in stock.columns and not stock.empty:
-            stock.insert(0, 'Item Code', '')
-        if 'විකුණුම් මිල' not in stock.columns:
-            stock['විකුණුම් මිල'] = 0.0
-        if 'ලාභය' not in stock.columns:
-            stock['ලාභය'] = 0.0
+        # දත්ත නිවැරදි අංක (Numeric) බවට පරිවර්තනය කිරීම (TypeError මඟහරවා ගැනීමට)
+        if not sales.empty:
+            sales['QTY Sold'] = pd.to_numeric(sales['QTY Sold'], errors='coerce').fillna(0)
+            sales['Sold Price'] = pd.to_numeric(sales['Sold Price'], errors='coerce').fillna(0)
             
+        if not expenses.empty:
+            expenses['ගාන රු.'] = pd.to_numeric(expenses['ගාන රු.'], errors='coerce').fillna(0)
+
         if not stock.empty:
+            if 'Item Code' not in stock.columns:
+                stock.insert(0, 'Item Code', '')
+            if 'විකුණුම් මිල' not in stock.columns:
+                stock['විකුණුම් මිල'] = 0.0
+            if 'ලාභය' not in stock.columns:
+                stock['ලාභය'] = 0.0
+                
             stock['Item Code'] = stock['Item Code'].fillna('')
+            
+            # Stock ෂීට් එකේ සියලුම මිල ගණන් සහ ප්‍රමාණ අංක බවට පත් කිරීම
+            numeric_cols = ['ගැනුම් මිල', 'විකුණුම් මිල', 'ලාභය', 'උදේ Stock', 'අද විකුනපු', 'Balance Stock', 'Stock Value']
+            for col in numeric_cols:
+                if col in stock.columns:
+                    stock[col] = pd.to_numeric(stock[col], errors='coerce').fillna(0)
+        else:
+            # Stock ෂීට් එක හිස් නම් අලුතින් Columns හදාගැනීම
+            stock = pd.DataFrame(columns=['Item Code', 'Item Category', 'Item Name', 'Size', 'ගැනුම් මිල', 'විකුණුම් මිල', 'ලාභය', 'උදේ Stock', 'අද විකුනපු', 'Balance Stock', 'Stock Value'])
+
         return sales, stock, expenses
     except Exception as e:
         st.error("Google Sheets වලින් දත්ත ලබාගැනීමට නොහැකි විය!")
@@ -67,7 +85,7 @@ def save_data(sales, stock, exp):
 # ඩේටා ලෝඩ් කිරීම
 sales_df, stock_df, exp_df = load_data()
 
-st.title("🛒 Shopping Bag POS System")
+st.title("🛒At grocerries Accounts System")
 
 # Sidebar
 st.sidebar.header("මෙනුව (Menu)")
@@ -80,7 +98,7 @@ menu = st.sidebar.radio("මෙතනින් තෝරන්න:", [
 
 # ---------------- 1. POS SYSTEM ----------------
 if menu == "POS (බිල්පත් නිකුත් කිරීම)":
-    st.header("🖥️ POS පද්ධතිය - නව බිල්පත")
+    st.header("🖥️ At grocerries Accounts System - නව බිල්පත")
     col1, col2 = st.columns([1, 1.2])
     
     with col1:
@@ -109,7 +127,7 @@ if menu == "POS (බිල්පත් නිකුත් කිරීම)":
             st.warning("තොග දත්ත නොමැත.")
 
     with col2:
-        st.subheader("🧾 වර්තමාන බිල්පත (Current Bill)")
+        st.subheader("🧾At grocerries Accounts System වර්තමාන බිල්පත (Current Bill)")
         if len(st.session_state.cart) > 0:
             cart_df = pd.DataFrame(st.session_state.cart)
             st.dataframe(cart_df, use_container_width=True)
@@ -124,19 +142,18 @@ if menu == "POS (බිල්පත් නිකුත් කිරීම)":
                     
                     for item in st.session_state.cart:
                         i_name = item['Item']
-                        i_qty = item['Qty']
-                        i_total = item['Total']
+                        i_qty = float(item['Qty'])
+                        i_total = float(item['Total'])
                         
                         new_sale = pd.DataFrame([{'Date': now.date(), 'Item Name': i_name, 'QTY Sold': i_qty, 'Sold Price': i_total}])
                         sales_df = pd.concat([sales_df, new_sale], ignore_index=True)
                         
                         idx = stock_df.index[stock_df['Item Name'] == i_name].tolist()[0]
-                        current_sold = stock_df.at[idx, 'අද විකුනපු']
-                        stock_df.at[idx, 'අද විකුනපු'] = (0 if pd.isna(current_sold) else current_sold) + i_qty
+                        current_sold = float(stock_df.at[idx, 'අද විකුනපු'])
+                        stock_df.at[idx, 'අද විකුනපු'] = current_sold + i_qty
                         
-                        morning_stock = stock_df.at[idx, 'උදේ Stock']
-                        morning_stock = 0 if pd.isna(morning_stock) else morning_stock
-                        buy_price = stock_df.at[idx, 'ගැනුම් මිල']
+                        morning_stock = float(stock_df.at[idx, 'උදේ Stock'])
+                        buy_price = float(stock_df.at[idx, 'ගැනුම් මිල'])
                         
                         stock_df.at[idx, 'Balance Stock'] = morning_stock - stock_df.at[idx, 'අද විකුනපු']
                         stock_df.at[idx, 'Stock Value'] = stock_df.at[idx, 'Balance Stock'] * buy_price
@@ -155,7 +172,7 @@ if menu == "POS (බිල්පත් නිකුත් කිරීම)":
 
 # ---------------- 2. DASHBOARD (Daily & Monthly) ----------------
 elif menu == "Dashboard (වාර්තා)":
-    st.header("📊 ව්‍යාපාරික වාර්තා (Business Dashboard)")
+    st.header("📊 At grocerries Accounts System ව්‍යාපාරික වාර්තා (Business Dashboard)")
     tab_daily, tab_monthly = st.tabs(["📅 දෛනික වාර්තාව (Daily)", "📆 මාසික වාර්තාව (Monthly Summary)"])
     
     with tab_daily:
@@ -181,9 +198,9 @@ elif menu == "Dashboard (වාර්තා)":
         if not daily_sales.empty and not stock_df.empty:
             for index, row in daily_sales.iterrows():
                 item = row['Item Name']
-                qty = row['QTY Sold']
+                qty = float(row['QTY Sold'])
                 if item in stock_df['Item Name'].values:
-                    buy_price = stock_df.loc[stock_df['Item Name'] == item, 'ගැනුම් මිල'].values[0]
+                    buy_price = float(stock_df.loc[stock_df['Item Name'] == item, 'ගැනුම් මිල'].values[0])
                     total_cogs += (buy_price * qty)
                 
         net_profit = total_sales_revenue - total_cogs - total_expenses
@@ -230,9 +247,9 @@ elif menu == "Dashboard (වාර්තා)":
                 if not m_sales.empty and not stock_df.empty:
                     for _, row in m_sales.iterrows():
                         item = row['Item Name']
-                        qty = row['QTY Sold']
+                        qty = float(row['QTY Sold'])
                         if item in stock_df['Item Name'].values:
-                            buy_price = stock_df.loc[stock_df['Item Name'] == item, 'ගැනුම් මිල'].values[0]
+                            buy_price = float(stock_df.loc[stock_df['Item Name'] == item, 'ගැනුම් මිල'].values[0])
                             m_cogs_total += (buy_price * qty)
                         
                 m_net_profit = m_sales_total - m_cogs_total - m_exp_total
@@ -245,7 +262,7 @@ elif menu == "Dashboard (වාර්තා)":
 
 # ---------------- 3. STOCK MANAGEMENT ----------------
 elif menu == "Stock (තොග කළමනාකරණය)":
-    st.header("📦 තොග කළමනාකරණය (Stock Management)")
+    st.header("📦 At grocerries Accounts System තොග කළමනාකරණය (Stock Management)")
     tab1, tab2, tab3 = st.tabs(["➕ අලුත් භාණ්ඩ සෑදීම", "📥 තොග එකතු කිරීම", "❌ භාණ්ඩ ඉවත් කිරීම"])
     
     with tab1:
@@ -267,7 +284,7 @@ elif menu == "Stock (තොග කළමනාකරණය)":
                     else:
                         new_row = {
                             'Item Code': item_code, 'Item Category': cat, 'Item Name': name, 'Size': size, 
-                            'ගැනුම් මිල': buy_price, 'විකුණුම් මිල': sell_price, 'ලාභය': profit,
+                            'ගැනුම් මිල': float(buy_price), 'විකුණුම් මිල': float(sell_price), 'ලාභය': float(profit),
                             'උදේ Stock': 0.0, 'අද විකුනපු': 0.0, 'Balance Stock': 0.0, 'Stock Value': 0.0
                         }
                         stock_df = pd.concat([stock_df, pd.DataFrame([new_row])], ignore_index=True)
@@ -283,14 +300,13 @@ elif menu == "Stock (තොග කළමනාකරණය)":
                 
                 if st.form_submit_button("තොගයට එකතු කරන්න"):
                     idx = stock_df.index[stock_df['Item Name'] == item_to_add].tolist()[0]
-                    current_stock = stock_df.at[idx, 'උදේ Stock']
-                    stock_df.at[idx, 'උදේ Stock'] = (0 if pd.isna(current_stock) else current_stock) + added_qty
+                    current_stock = float(stock_df.at[idx, 'උදේ Stock'])
+                    stock_df.at[idx, 'උදේ Stock'] = current_stock + added_qty
                     
-                    sold_qty = stock_df.at[idx, 'අද විකුනපු']
-                    sold_qty = 0 if pd.isna(sold_qty) else sold_qty
+                    sold_qty = float(stock_df.at[idx, 'අද විකුනපු'])
                     
                     stock_df.at[idx, 'Balance Stock'] = stock_df.at[idx, 'උදේ Stock'] - sold_qty
-                    stock_df.at[idx, 'Stock Value'] = stock_df.at[idx, 'Balance Stock'] * stock_df.at[idx, 'ගැනුම් මිල']
+                    stock_df.at[idx, 'Stock Value'] = stock_df.at[idx, 'Balance Stock'] * float(stock_df.at[idx, 'ගැනුම් මිල'])
                     
                     if save_data(sales_df, stock_df, exp_df):
                         st.success(f"{item_to_add} සඳහා අලුතින් {added_qty} ක් එකතු විය!")
@@ -307,7 +323,7 @@ elif menu == "Stock (තොග කළමනාකරණය)":
 
 # ---------------- 4. ADD EXPENSES ----------------
 elif menu == "Expenses (වියදම්)":
-    st.header("💸 වියදම් ඇතුලත් කරන්න")
+    st.header("💸 At grocerries Accounts System වියදම් ඇතුලත් කරන්න")
     with st.form("expense_form"):
         date = st.date_input("දිනය")
         category = st.text_input("වියදම් වර්ගය (උදා: Transport)")
@@ -315,7 +331,7 @@ elif menu == "Expenses (වියදම්)":
         amount = st.number_input("මුදල (Rs.)", min_value=0.0)
         
         if st.form_submit_button("වියදම Save කරන්න"):
-            new_exp = pd.DataFrame([{'දිනය': pd.to_datetime(date), 'Item Category': category, 'විස්තර': desc, 'ගාන රු.': amount}])
+            new_exp = pd.DataFrame([{'දිනය': pd.to_datetime(date), 'Item Category': category, 'විස්තර': desc, 'ගාන රු.': float(amount)}])
             exp_df = pd.concat([exp_df, new_exp], ignore_index=True)
             if save_data(sales_df, stock_df, exp_df):
                 st.success(f"රු. {amount} ක වියදමක් සාර්ථකව Google Sheet එකට ඇතුලත් කළා!")
