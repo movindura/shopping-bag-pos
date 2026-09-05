@@ -4,11 +4,11 @@ import requests
 import streamlit as st
 
 st.set_page_config(
-    page_title="At groceries POS System", layout="wide", page_icon="🛒"
+    page_title="Shopping Bag POS System", layout="wide", page_icon="🛒"
 )
 
 # ඔබ Deploy කළ Google Apps Script Web App URL එක මෙහි දමන්න
-WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx4cqkJ_GlfGLHXpiZVx6AiOkQUU0h0TpDjZ7YaezN_DrK6DVgjDJBfQFCuhi6lI6iIyw/exec"
+WEB_APP_URL = "ඔබේ_Apps_Script_Web_App_URL_එක_මෙහි_දමන්න"
 
 
 # Google Sheets වලින් දත්ත ලබා ගැනීම
@@ -45,7 +45,7 @@ sales_df, stock_df, exp_df = load_data()
 if "cart" not in st.session_state:
   st.session_state.cart = []
 
-st.title("🛒 At groceries POS System")
+st.title("🛒 Shopping Bag POS System")
 
 # Sidebar
 st.sidebar.header("මෙනුව (Menu)")
@@ -61,7 +61,7 @@ menu = st.sidebar.radio(
 
 # ---------------- 1. POS SYSTEM ----------------
 if menu == "POS (බිල්පත් නිකුත් කිරීම)":
-  st.header("🖥️ At groceries POS System - නව බිල්පත")
+  st.header("🖥️ POS පද්ධතිය - නව බිල්පත")
 
   if stock_df.empty:
     st.warning("⚠️ තොග දත්ත (Stock) හමු නොවීය. කරුණාකර Google Sheet එක පරීක්ෂා කරන්න.")
@@ -120,10 +120,7 @@ if menu == "POS (බිල්පත් නිකුත් කිරීම)":
               "✅ මුදල් ගෙවා බිල අවසන් කරන්න", use_container_width=True
           ):
             st.session_state.cart = []
-            st.success(
-                "බිල්පත සාර්ථකයි! (Google Sheets වෙත දත්ත යැවීම සඳහා Apps Script"
-                " POST පහසුකම ක්‍රියාත්මක කළ හැක)."
-            )
+            st.success("බිල්පත සාර්ථකයි!")
         with col_b:
           if st.button("🗑️ බිල මකා දමන්න", use_container_width=True):
             st.session_state.cart = []
@@ -141,19 +138,20 @@ elif menu == "Dashboard (වාර්තා)":
   with tab_daily:
     selected_date = st.date_input("දවස තෝරන්න", datetime.today())
     st.write("දෛනික වාර්තා දත්ත පෙන්වීම සඳහා සූදානම් කර ඇත.")
-    display_stock = stock_df[
-        [
-            "Item Code",
-            "Item Category",
-            "Item Name",
-            "ගැනුම් මිල",
-            "විකුණුම් මිල",
-            "ලාභය",
-            "Balance Stock",
-            "Stock Value",
-        ]
-    ]
-    st.dataframe(display_stock, use_container_width=True)
+    if not stock_df.empty:
+      display_stock = stock_df[
+          [
+              "Item Code",
+              "Item Category",
+              "Item Name",
+              "ගැනුම් මිල",
+              "විකුණුම් මිල",
+              "ලාභය",
+              "Balance Stock",
+              "Stock Value",
+          ]
+      ]
+      st.dataframe(display_stock, use_container_width=True)
 
   with tab_monthly:
     st.subheader("මාසික ආදායම් සහ වියදම් සාරාංශය")
@@ -162,6 +160,104 @@ elif menu == "Dashboard (වාර්තා)":
 # ---------------- 3. STOCK MANAGEMENT ----------------
 elif menu == "Stock (තොග කළමනාකරණය)":
   st.header("📦 තොග කළමනාකරණය (Stock Management)")
+
+  tab1, tab2, tab3 = st.tabs(
+      ["➕ අලුත් භාණ්ඩ සෑදීම", "📥 තොග එකතු කිරීම", "❌ භාණ්ඩ ඉවත් කිරීම"]
+  )
+
+  # Tab 1: අලුත් භාණ්ඩයක් සිස්ටම් එකට හැඳින්වීම
+  with tab1:
+    st.subheader("අලුත් භාණ්ඩයක් සිස්ටම් එකට එකතු කිරීම")
+    with st.form("add_new_item_form"):
+      item_code = st.text_input("භාණ්ඩයේ කේතය (Item Code / Barcode)")
+      cat = st.text_input("කාණ්ඩය (Item Category)")
+      name = st.text_input("භාණ්ඩයේ නම (Item Name)")
+      size = st.text_input("ප්‍රමාණය / සයිස් (Size)")
+      col_a, col_b = st.columns(2)
+      buy_price = col_a.number_input("ගැනුම් මිල (Buying Price)", min_value=0.0)
+      sell_price = col_b.number_input(
+          "විකුණුම් මිල (Selling Price)", min_value=0.0
+      )
+      profit = sell_price - buy_price
+
+      if st.form_submit_button("System එකට එකතු කරන්න"):
+        if name:
+          if (
+              not stock_df.empty
+              and name in stock_df["Item Name"].values
+          ):
+            st.error("මෙම නමින් භාණ්ඩයක් දැනටමත් ඇත!")
+          else:
+            new_row = {
+                "Item Code": item_code,
+                "Item Category": cat,
+                "Item Name": name,
+                "Size": size,
+                "ගැනුම් මිල": buy_price,
+                "විකුණුම් මිල": sell_price,
+                "ලාභය": profit,
+                "උදේ Stock": 0.0,
+                "අද විකුනපු": 0.0,
+                "Balance Stock": 0.0,
+                "Stock Value": 0.0,
+            }
+            stock_df = pd.concat(
+                [stock_df, pd.DataFrame([new_row])], ignore_index=True
+            )
+            st.success(
+                f"{name} සාර්ථකව එකතු කළා! (මෙය Google Sheet එකෙහි යාවත්කාලීන"
+                " කරගත හැක)."
+            )
+        else:
+          st.warning("කරුණාකර භාණ්ඩයේ නම ඇතුළත් කරන්න.")
+
+  # Tab 2: දැනට ඇති භාණ්ඩයකට තොග එකතු කිරීම
+  with tab2:
+    st.subheader("දැනට ඇති භාණ්ඩයකට තොග එකතු කිරීම")
+    if stock_df.empty:
+      st.info("තොග දත්ත නොමැත.")
+    else:
+      with st.form("add_stock_qty_form"):
+        item_to_add = st.selectbox(
+            "භාණ්ඩය තෝරන්න", stock_df["Item Name"].unique()
+        )
+        added_qty = st.number_input("අලුතින් ගෙනා ප්‍රමාණය", min_value=1, value=1)
+
+        if st.form_submit_button("තොගයට එකතු කරන්න"):
+          idx = stock_df.index[stock_df["Item Name"] == item_to_add].tolist()[0]
+          current_stock = stock_df.at[idx, "උදේ Stock"]
+          current_stock = 0 if pd.isna(current_stock) else current_stock
+          stock_df.at[idx, "උදේ Stock"] = current_stock + added_qty
+
+          sold_qty = stock_df.at[idx, "අද විකුනපු"]
+          sold_qty = 0 if pd.isna(sold_qty) else sold_qty
+
+          stock_df.at[idx, "Balance Stock"] = (
+              stock_df.at[idx, "උදේ Stock"] - sold_qty
+          )
+          buy_p = stock_df.at[idx, "ගැනුම් මිල"]
+          stock_df.at[idx, "Stock Value"] = (
+              stock_df.at[idx, "Balance Stock"] * (0 if pd.isna(buy_p) else buy_p)
+          )
+
+          st.success(f"{item_to_add} සඳහා අලුතින් {added_qty} ක් එකතු විය!")
+
+  # Tab 3: භාණ්ඩයක් ඉවත් කිරීම
+  with tab3:
+    st.subheader("භාණ්ඩයක් ඉවත් කිරීම")
+    if stock_df.empty:
+      st.info("ඉවත් කිරීමට භාණ්ඩ නොමැත.")
+    else:
+      with st.form("remove_item_form"):
+        item_to_remove = st.selectbox(
+            "ඉවත් කළ යුතු භාණ්ඩය තෝරන්න", stock_df["Item Name"].unique()
+        )
+        if st.form_submit_button("සිස්ටම් එකෙන් ඉවත් කරන්න"):
+          stock_df = stock_df[stock_df["Item Name"] != item_to_remove]
+          st.success(f"{item_to_remove} සිස්ටම් එකෙන් ඉවත් කළා!")
+
+  st.markdown("---")
+  st.subheader("📦 වර්තමාන සම්පූර්ණ තොග ලැයිස්තුව")
   st.dataframe(stock_df, use_container_width=True)
 
 # ---------------- 4. EXPENSES ----------------
